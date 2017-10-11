@@ -1,0 +1,47 @@
+FROM centos:7.4.1708
+
+MAINTAINER Operations at Ribose <operations@ribose.com>
+
+LABEL description="CentOS 7.4 with systemd" \
+      maintainer="Operations at Ribose <operations@ribose.com>"
+
+# Update yum repos
+RUN yum clean expire-cache && yum install -y yum-utils deltarpm
+
+# yum fails on checksums if built on docker host based on overlayfs
+# https://github.com/docker/docker/issues/10180
+RUN yum install -y yum-plugin-ovl
+RUN yum upgrade -y
+
+# elinks and screen for convenience
+RUN yum install -y curl sudo tar hostname iproute secure-delete \
+    elinks screen \
+  && yum clean all
+
+# From https://hub.docker.com/_/centos/
+# Dockerfile for systemd base image
+# systemd is now included in both the centos:7 and centos:latest base
+# containers, but it is not active by default.
+RUN (cd /lib/systemd/system/sysinit.target.wants/; for i in *; \
+    do [ $i == systemd-tmpfiles-setup.service ] || rm -f $i; done); \
+  rm -f /lib/systemd/system/multi-user.target.wants/*;\
+  rm -f /etc/systemd/system/*.wants/*;\
+  rm -f /lib/systemd/system/local-fs.target.wants/*; \
+  rm -f /lib/systemd/system/sockets.target.wants/*udev*; \
+  rm -f /lib/systemd/system/sockets.target.wants/*initctl*; \
+  rm -f /lib/systemd/system/basic.target.wants/*;\
+  rm -f /lib/systemd/system/anaconda.target.wants/*;
+
+# FIXME: A RedHat guy's workaround
+# https://vpavlin.eu/2015/02/fedora-docker-and-systemd/
+# And also from here
+RUN systemctl mask systemd-remount-fs.service dev-hugepages.mount \
+  sys-fs-fuse-connections.mount systemd-logind.service getty.target \
+  console-getty.service
+
+RUN cp /usr/lib/systemd/system/dbus.service /etc/systemd/system/; \
+  sed -i 's/OOMScoreAdjust=-900//' /etc/systemd/system/dbus.service
+
+VOLUME ["/sys/fs/cgroup"]
+
+ENTRYPOINT ["/usr/sbin/init"]
