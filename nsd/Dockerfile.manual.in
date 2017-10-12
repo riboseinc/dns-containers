@@ -1,4 +1,4 @@
-FROM ${NS_REMOTE}/centos:${VERSION}.${CONTAINER_BRANCH}
+FROM ${NS_REMOTE}/dns-centos-systemd:${VERSION}.${CONTAINER_BRANCH}
 
 MAINTAINER Operations at Ribose <operations@ribose.com>
 
