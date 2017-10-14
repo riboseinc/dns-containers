@@ -1,0 +1,35 @@
+FROM ${NS_REMOTE}/dns-centos-systemd:${VERSION}.${CONTAINER_BRANCH}
+
+MAINTAINER Operations at Ribose <operations@ribose.com>
+
+LABEL description "Development container for NSD fuzzing project" \
+      maintainer="Operations at Ribose <operations@ribose.com>"
+
+ARG NSD_VERSION=4.1.17
+
+#Install dev tools
+#RUN yum group install -y "Development Tools"
+RUN yum install -y gcc openssl openssl-devel libevent-devel wget net-tools
+
+#Build nsd
+#TODO: Add signature check
+RUN mkdir -p /etc/nsd/src && cd /etc/nsd/src \
+	&& wget -q https://www.nlnetlabs.nl/downloads/nsd/nsd-${NSD_VERSION}.tar.gz \
+	&& tar xzf nsd-${NSD_VERSION}.tar.gz && cd nsd-${NSD_VERSION} \
+	&& ./configure \
+	&& make \
+	&& make install \
+	&& make clean
+
+#Remove unused deps
+RUN yum -y autoremove 
+
+#May be omitted if we want to make a minimal configuration
+RUN nsd-control-setup
+
+#TODO: Check if needed
+VOLUME /zones /etc/nsd /var/db/nsd
+
+EXPOSE 53 53/udp
+
+CMD ["run.sh"]
