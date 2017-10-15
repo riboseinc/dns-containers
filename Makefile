@@ -70,10 +70,10 @@ $(TARGET)/Dockerfile:
 	ROOT_CONTAINER=$(ROOT_CONTAINER); \
 	CONTAINER_BRANCH=$(CONTAINER_BRANCH); \
 	NS_REMOTE=$(NS_REMOTE); \
-	FROM_LINE=`head -1 $$@.nsd-centos-systemd-nsd-4.1.17-dev.in`; \
+	FROM_LINE=`head -1 $$@.in`; \
 	FROM_LINE_EVALED=`eval "echo \"$$$${FROM_LINE}\""`; \
 		echo "$$$${FROM_LINE_EVALED}" > $$@; \
-		sed '1d' $$@.nsd-centos-systemd-nsd-4.1.17-dev.in >> $$@
+		sed '1d' $$@.in >> $$@
 
 build-$(TARGET):	$(TARGET)/Dockerfile
 	cat $(TARGET)/Dockerfile
