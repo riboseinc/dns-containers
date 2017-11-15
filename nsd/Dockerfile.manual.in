@@ -17,7 +17,7 @@ ENV UID=991 GID=991
 
 RUN yum install -y openssl openssl-devel
 # TODO: upgrade nsd package - this is old
-RUN yum install http://share.lucidsolutions.co.nz/pub/centos/nsd/nsd-4.1.6-3.el7.centos.x86_64.rpm
+RUN yum install http://share.lucidsolutions.co.nz/pub/centos/nsd/nsd-4.1.6-3.el7.centos.x86_64.rpm -y
 RUN yum install -y nsd
 
 # Run the setup script to create self signed certificates for controlling NSD (iff the nsd-control support is enabled) and for the server itself.
