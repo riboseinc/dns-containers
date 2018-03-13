@@ -13,32 +13,40 @@ ARG GPG_FINGERPRINT="EDFA A3F2 CA4E 6EB0 5681  AF8E 9F6F 1C2D 7E04 5F8D"
 
 #Install dev tools
 #RUN yum group install -y "Development Tools"
-RUN yum install -y gcc openssl openssl-devel libevent-devel wget net-tools
+RUN yum install -y gcc openssl openssl-devel libevent-devel wget net-tools cronie
 
 #Build nsd
-RUN mkdir -p /etc/nsd/src && cd /etc/nsd/src \
-	&& wget -q https://www.nlnetlabs.nl/downloads/nsd/nsd-${NSD_VERSION}.tar.gz \
-	&& wget -q https://www.nlnetlabs.nl/downloads/nsd/nsd-4.1.17.tar.gz.asc \
-	&& echo "Verifying both integrity and authenticity of nsd-${NSD_VERSION}.tar.gz..." \
-	&& CHECKSUM=$(sha256sum nsd-${NSD_VERSION}.tar.gz | awk '{print $1}') \
-	&& if [ "${CHECKSUM}" != "${SHA256_HASH}" ]; then echo "Warning! Checksum does not match!" && exit 1; fi \
-	&& gpg --keyserver keys.gnupg.net --recv-keys ${GPG_SHORTID} \
-	&& FINGERPRINT="$(LANG=C gpg --verify nsd-${NSD_VERSION}.tar.gz.asc nsd-${NSD_VERSION}.tar.gz 2>&1 \
-	| sed -n "s#Primary key fingerprint: \(.*\)#\1#p")" \
-	&& if [ -z "${FINGERPRINT}" ]; then echo "Warning! Invalid GPG signature!" && exit 1; fi \
-	&& if [ "${FINGERPRINT}" != "${GPG_FINGERPRINT}" ]; then echo "Warning! Wrong GPG fingerprint!" && exit 1; fi \
-	&& echo "All seems good, now unpacking nsd-${NSD_VERSION}.tar.gz..." \
-	&& tar xzf nsd-${NSD_VERSION}.tar.gz && cd nsd-${NSD_VERSION} \
-	&& ./configure \
-	&& make \
-	&& make install \
-	&& make clean
+RUN mkdir -p /etc/nsd/ /etc/nsd/server.d/ /etc/nsd/conf.d/ /usr/src/nsd /opt/nsd/ /etc/nsd/zones/ /var/db/nsd/ \
+  && cd /usr/src/nsd \
+  && useradd nsd -s /sbin/nologin -M \
+  && chown -R nsd: /etc/nsd/ \
+  && wget -q https://www.nlnetlabs.nl/downloads/nsd/nsd-${NSD_VERSION}.tar.gz \
+  && wget -q https://www.nlnetlabs.nl/downloads/nsd/nsd-4.1.17.tar.gz.asc \
+  && echo "Verifying both integrity and authenticity of nsd-${NSD_VERSION}.tar.gz..." \
+  && CHECKSUM=$(sha256sum nsd-${NSD_VERSION}.tar.gz | awk '{print $1}') \
+  && if [ "${CHECKSUM}" != "${SHA256_HASH}" ]; then echo "Warning! Checksum does not match!" && exit 1; fi \
+  && gpg --keyserver keys.gnupg.net --recv-keys ${GPG_SHORTID} \
+  && FINGERPRINT="$(LANG=C gpg --verify nsd-${NSD_VERSION}.tar.gz.asc nsd-${NSD_VERSION}.tar.gz 2>&1 \
+  | sed -n "s#Primary key fingerprint: \(.*\)#\1#p")" \
+  && if [ -z "${FINGERPRINT}" ]; then echo "Warning! Invalid GPG signature!" && exit 1; fi \
+  && if [ "${FINGERPRINT}" != "${GPG_FINGERPRINT}" ]; then echo "Warning! Wrong GPG fingerprint!" && exit 1; fi \
+  && echo "All seems good, now unpacking nsd-${NSD_VERSION}.tar.gz..." \
+  && tar xzf nsd-${NSD_VERSION}.tar.gz && cd nsd-${NSD_VERSION} \
+  && ./configure \
+  && make \
+  && make install \
+  && make clean
 
 #Remove unused deps
-RUN yum -y autoremove 
+RUN yum -y autoremove
 
 #May be omitted if we want to make a minimal configuration
 RUN nsd-control-setup
+
+COPY shared/nsd.service /etc/systemd/system/nsd.service
+COPY shared/nsd.conf /etc/nsd/nsd.conf
+
+RUN systemctl enable nsd crond
 
 #TODO: Check if needed
 VOLUME /zones /etc/nsd /var/db/nsd
